@@ -42,10 +42,10 @@ function renderLibrary() {
                         <span class="btn-speak" data-word="${w.word.replace(/"/g, '&quot;')}" style="cursor:pointer; font-size:14px; flex-shrink:0;" title="播放发音">🔊</span>
                     </div>
                 </td>
-                <td>
+                <td style="word-break: break-word;">
                     ${w.meaning && !w.meaning.includes('未找到') && !w.meaning.includes('失败') && !w.meaning.includes('无效') && /[一-龥]/.test(w.meaning) ? `
-                        <div style="font-size:14px; font-weight:500;">${w.meaning}</div>
-                        <div style="font-size:12px; color:#6b7280; font-family:monospace;">${w.phonetic || ''}</div>
+                        <div style="font-size:14px; font-weight:500; line-height:1.4; color:#374151;">${w.meaning}</div>
+                        ${w.phonetic ? `<div style="font-size:12px; color:#6b7280; font-family:monospace; margin-top:4px;">${w.phonetic}</div>` : ''}
                     ` : `
                         <div style="font-size:12px; color:#ef4444; margin-bottom:4px;">${w.meaning || '暂无'}</div>
                         <button class="btn-fetch" data-id="${w.id}" style="padding:4px 8px; font-size:12px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; cursor:pointer;">重新获取</button>
@@ -69,11 +69,11 @@ function renderLibrary() {
         const tableHeader = `
             <thead>
                 <tr>
-                    <th style="width: 20%">单词</th>
-                    <th style="width: 20%">释义</th>
+                    <th style="width: 15%">单词</th>
+                    <th style="width: 30%">释义</th>
                     <th style="width: 30%">上下文</th>
                     <th style="width: 10%">状态</th>
-                    <th style="width: 20%">操作</th>
+                    <th style="width: 15%">操作</th>
                 </tr>
             </thead>
         `;
