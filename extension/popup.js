@@ -19,7 +19,7 @@ function render(filter = '') {
     const meaningHtml = w.meaning ? `<div style="font-size:12px; margin-top:4px; color:#2563eb;">${w.phonetic || ''} ${w.meaning}</div>` : '';
     
     div.innerHTML = `
-      <div class="word">${w.word}</div>
+      <div class="word" style="${w.isPinned ? 'color:#d97706;' : ''}">${w.isPinned ? '📌 ' : ''}${w.word}</div>
       <div class="context">${w.context}</div>
       ${meaningHtml}
       <div class="actions">
