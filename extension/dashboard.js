@@ -309,8 +309,8 @@ function flipCard() {
     card.classList.add('show-back');
     card.removeEventListener('click', flipCard);
     
-    if (currentWord.meaning) {
-        showDict(currentWord.phonetic, currentWord.meaning);
+    if (currentWord.dictHtml || currentWord.meaning) {
+        showDict(currentWord.phonetic, currentWord.meaning, currentWord.dictHtml);
     } else {
         const cleanWord = currentWord.word.replace(/[^a-zA-Z\-]/g, '');
         if (!cleanWord) {
