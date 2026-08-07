@@ -70,6 +70,8 @@ document.getElementById('target-lang').addEventListener('change', (e) => {
     chrome.storage.local.set({ targetLang: e.target.value });
 });
 
+
+
 document.getElementById('btn-reset-vip').addEventListener('click', () => {
     chrome.storage.local.remove('isPaidDemo', () => {
         alert('会员身份已重置！去刷新一下阅读网页，您现在是免费用户了！');
