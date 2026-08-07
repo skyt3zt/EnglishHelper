@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>WordCatcher</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <div class="stats" style="align-items: center;">
+      <span>总数: <b id="total">0</b></span>
+      <span>待复习: <b id="review-today">0</b></span>
+      <button id="btn-review" style="background:#3b82f6; color:#fff;">复习</button>
+      <button id="btn-export" style="background:#10b981; color:#fff;">导出</button>
+      <button id="btn-reset-vip" style="background:#ef4444; color:#fff; font-size:10px;">测试: 清除VIP</button>
+      <button id="btn-enable-vip" style="background:#f59e0b; color:#fff; font-size:10px;">测试: 开通VIP</button>
+    </div>
+    <div style="display: flex; gap: 8px; margin-top: 8px;">
+      <input type="text" id="search" placeholder="搜索单词..." style="flex: 1;">
+      <select id="target-lang" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+        <option value="zh-CN">中文 (简体)</option>
+        <option value="zh-TW">中文 (繁体)</option>
+        <option value="ja">日语</option>
+        <option value="ko">韩语</option>
+        <option value="es">西班牙语</option>
+        <option value="fr">法语</option>
+        <option value="de">德语</option>
+        <option value="ru">俄语</option>
+      </select>
+    </div>
+  </div>
+  <div id="list"></div>
+  <script src="popup.js"></script>
+</body>
+</html>
