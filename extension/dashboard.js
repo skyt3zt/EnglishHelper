@@ -33,7 +33,7 @@ function renderLibrary() {
         const words = res.words.reverse();
         
         const renderRows = (list) => list.map(w => `
-            <tr style="${w.reviewStage === -1 ? 'background: #f8fafc;' : (w.isPinned ? 'background: #fffbeb;' : '')}">
+            <tr draggable="${w.reviewStage !== -1}" data-id="${w.id}" class="${w.reviewStage !== -1 ? 'draggable-row' : ''}" style="${w.reviewStage === -1 ? 'background: #f8fafc;' : (w.isPinned ? 'background: #fffbeb; cursor: move;' : 'cursor: move;')}">
                 <td style="font-weight:600; color:${w.reviewStage === -1 ? '#64748b' : '#111827'};">
                     ${w.isPinned ? '📌 ' : ''}${w.word}
                     <span class="btn-speak" data-word="${w.word.replace(/"/g, '&quot;')}" style="cursor: pointer; font-size: 14px; margin-left: 4px;" title="播放发音">🔊</span>
@@ -52,10 +52,6 @@ function renderLibrary() {
                 <td>
                     <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
                         <button class="btn-pin" data-id="${w.id}" style="padding:4px 8px; font-size:12px; background:#fef3c7; color:#d97706; border:none; cursor:pointer;" title="${w.isPinned ? '取消置顶' : '置顶 (最多3个)'}">${w.isPinned ? '取消📌' : '📌'}</button>
-                        ${w.reviewStage !== -1 ? `
-                        <button class="btn-up" data-id="${w.id}" style="padding:4px 8px; font-size:12px; background:#f3f4f6; color:#4b5563; border:none; cursor:pointer;" title="上移">🔼</button>
-                        <button class="btn-down" data-id="${w.id}" style="padding:4px 8px; font-size:12px; background:#f3f4f6; color:#4b5563; border:none; cursor:pointer;" title="下移">🔽</button>
-                        ` : ''}
                         <button class="btn-master" data-id="${w.id}" style="padding:4px 8px; font-size:12px; background:#d1fae5; color:#047857; border:none; cursor:pointer;">${w.reviewStage === -1 ? '取消' : '掌握'}</button>
                         <button class="btn-del" data-id="${w.id}" style="padding:4px 8px; font-size:12px; background:#fee2e2; color:#b91c1c; border:none; cursor:pointer;">删除</button>
                     </div>
@@ -98,6 +94,56 @@ function renderLibrary() {
             </div>
         `;
 
+        let dragSrcId = null;
+        
+        document.getElementById('lib-container')?.addEventListener('dragstart', (e) => {
+            const tr = e.target.closest('.draggable-row');
+            if (!tr) return;
+            dragSrcId = parseInt(tr.dataset.id);
+            e.dataTransfer.effectAllowed = 'move';
+            tr.style.opacity = '0.5';
+        });
+
+        document.getElementById('lib-container')?.addEventListener('dragend', (e) => {
+            const tr = e.target.closest('.draggable-row');
+            if (tr) tr.style.opacity = '1';
+        });
+
+        document.getElementById('lib-container')?.addEventListener('dragover', (e) => {
+            e.preventDefault(); 
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        document.getElementById('lib-container')?.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const tr = e.target.closest('.draggable-row');
+            if (!tr || !dragSrcId) return;
+            
+            const dropId = parseInt(tr.dataset.id);
+            if (dragSrcId === dropId) return;
+            
+            const fromIdx = words.findIndex(w => w.id === dragSrcId);
+            const toIdx = words.findIndex(w => w.id === dropId);
+            
+            if (fromIdx !== -1 && toIdx !== -1) {
+                const [movedItem] = words.splice(fromIdx, 1);
+                const newToIdx = words.findIndex(w => w.id === dropId);
+                
+                if (fromIdx < toIdx) {
+                    words.splice(newToIdx + 1, 0, movedItem);
+                } else {
+                    words.splice(newToIdx, 0, movedItem);
+                }
+                
+                const enforceOrder = (list) => {
+                    const pinned = list.filter(w => w.isPinned);
+                    const unpinned = list.filter(w => !w.isPinned);
+                    return [...pinned, ...unpinned];
+                };
+                chrome.storage.local.set({ words: enforceOrder(words).reverse() }, renderLibrary);
+            }
+        });
+
         document.getElementById('lib-container')?.addEventListener('click', async (e) => {
             if (e.target.classList.contains('btn-speak')) {
                 e.stopPropagation();
@@ -136,34 +182,6 @@ function renderLibrary() {
                 }
                 wordObj.isPinned = !wordObj.isPinned;
                 chrome.storage.local.set({ words: enforceOrder(words).reverse() }, renderLibrary);
-            }
-            else if (btn.classList.contains('btn-up')) {
-                const idx = words.findIndex(w => w.id === id);
-                let prevIdx = -1;
-                for (let i = idx - 1; i >= 0; i--) {
-                    if (words[i].reviewStage !== -1 && words[i].isPinned === wordObj.isPinned) { 
-                        prevIdx = i; 
-                        break; 
-                    }
-                }
-                if (prevIdx !== -1) {
-                    [words[idx], words[prevIdx]] = [words[prevIdx], words[idx]];
-                    chrome.storage.local.set({ words: enforceOrder(words).reverse() }, renderLibrary);
-                }
-            }
-            else if (btn.classList.contains('btn-down')) {
-                const idx = words.findIndex(w => w.id === id);
-                let nextIdx = -1;
-                for (let i = idx + 1; i < words.length; i++) {
-                    if (words[i].reviewStage !== -1 && words[i].isPinned === wordObj.isPinned) { 
-                        nextIdx = i; 
-                        break; 
-                    }
-                }
-                if (nextIdx !== -1) {
-                    [words[idx], words[nextIdx]] = [words[nextIdx], words[idx]];
-                    chrome.storage.local.set({ words: enforceOrder(words).reverse() }, renderLibrary);
-                }
             }
             else if (btn.classList.contains('btn-fetch')) {
                 btn.textContent = '获取中...';
