@@ -5,12 +5,14 @@ let currentWord = null;
 let isFlipped = false;
 
 let currentView = 'review';
+let currentSearchQuery = '';
 
 document.getElementById('nav-review').addEventListener('click', () => switchView('review'));
 document.getElementById('nav-library').addEventListener('click', () => switchView('library'));
 
 function switchView(view) {
     currentView = view;
+    currentSearchQuery = ''; // Reset search on view switch
     document.getElementById('nav-review').classList.toggle('active', view === 'review');
     document.getElementById('nav-library').classList.toggle('active', view === 'library');
     if (view === 'review') init();
@@ -63,8 +65,13 @@ function renderLibrary() {
             </tr>
         `).join('');
 
-        const learning = words.filter(w => w.reviewStage !== -1);
-        const mastered = words.filter(w => w.reviewStage === -1);
+        const filteredWords = currentSearchQuery 
+            ? words.filter(w => w.word.toLowerCase().includes(currentSearchQuery.toLowerCase()) || 
+                                (w.meaning && w.meaning.toLowerCase().includes(currentSearchQuery.toLowerCase())))
+            : words;
+
+        const learning = filteredWords.filter(w => w.reviewStage !== -1);
+        const mastered = filteredWords.filter(w => w.reviewStage === -1);
         
         const tableHeader = `
             <thead>
@@ -78,25 +85,43 @@ function renderLibrary() {
             </thead>
         `;
 
+        const wrapper = document.getElementById('lib-container');
+        if (wrapper) {
+            document.getElementById('learning-count').textContent = `正在学习 (${learning.length})`;
+            document.getElementById('learning-tbody').innerHTML = renderRows(learning) || '<tr><td colspan="5" style="text-align:center; padding: 30px; color:#94a3b8;">未找到匹配生词</td></tr>';
+            
+            document.getElementById('mastered-count').textContent = `已掌握 (${mastered.length})`;
+            document.getElementById('mastered-tbody').innerHTML = renderRows(mastered) || '<tr><td colspan="5" style="text-align:center; padding: 30px; color:#94a3b8;">未找到匹配单词</td></tr>';
+            return;
+        }
+
         app.innerHTML = `
             <div id="lib-container">
-                <h3 style="margin-top:0; margin-bottom:12px; color:#334155; font-size:16px;">正在学习 (${learning.length})</h3>
+                <div style="margin-bottom: 20px;">
+                    <input type="text" id="lib-search" placeholder="搜索单词或释义..." style="width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid #e5e7eb; box-sizing: border-box; font-size: 14px; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e5e7eb'">
+                </div>
+                <h3 id="learning-count" style="margin-top:0; margin-bottom:12px; color:#334155; font-size:16px;">正在学习 (${learning.length})</h3>
                 <table class="library-table" style="margin-bottom: 30px;">
                     ${tableHeader}
-                    <tbody>
+                    <tbody id="learning-tbody">
                         ${renderRows(learning) || '<tr><td colspan="5" style="text-align:center; padding: 30px; color:#94a3b8;">暂无生词</td></tr>'}
                     </tbody>
                 </table>
 
-                <h3 style="margin-top:0; margin-bottom:12px; color:#334155; font-size:16px;">已掌握 (${mastered.length})</h3>
+                <h3 id="mastered-count" style="margin-top:0; margin-bottom:12px; color:#334155; font-size:16px;">已掌握 (${mastered.length})</h3>
                 <table class="library-table" style="opacity: 0.8;">
                     ${tableHeader}
-                    <tbody>
+                    <tbody id="mastered-tbody">
                         ${renderRows(mastered) || '<tr><td colspan="5" style="text-align:center; padding: 30px; color:#94a3b8;">暂无已掌握单词</td></tr>'}
                     </tbody>
                 </table>
             </div>
         `;
+
+        document.getElementById('lib-search').addEventListener('input', (e) => {
+            currentSearchQuery = e.target.value.trim();
+            renderLibrary();
+        });
 
         let dragSrcId = null;
         
