@@ -35,6 +35,7 @@ function renderLibrary() {
         const renderRows = (list) => list.map(w => `
             <tr draggable="${w.reviewStage !== -1}" data-id="${w.id}" class="${w.reviewStage !== -1 ? 'draggable-row' : ''}" style="${w.reviewStage === -1 ? 'background: #f8fafc;' : (w.isPinned ? 'background: #fffbeb; cursor: move;' : 'cursor: move;')}">
                 <td style="font-weight:600; color:${w.reviewStage === -1 ? '#64748b' : '#111827'};">
+                    ${w.reviewStage !== -1 ? '<span style="color:#94a3b8; font-size:16px; margin-right:6px; cursor:move;" title="按住拖拽排序">⋮⋮</span>' : ''}
                     ${w.isPinned ? '📌 ' : ''}${w.word}
                     <span class="btn-speak" data-word="${w.word.replace(/"/g, '&quot;')}" style="cursor: pointer; font-size: 14px; margin-left: 4px;" title="播放发音">🔊</span>
                 </td>
