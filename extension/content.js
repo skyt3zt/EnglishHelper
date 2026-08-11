@@ -148,3 +148,21 @@ chrome.runtime.onMessage.addListener((req) => {
       saveWord();
   }
 });
+
+
+chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.words && floatingBtnHost) {
+        const newWords = changes.words.newValue || [];
+        const btn = floatingBtnHost.shadowRoot.querySelector('button');
+        if (!btn || floatingBtnHost.style.display === 'none') return;
+        
+        // Find the currently added word
+        const currentWord = currentSelection.text.replace(/[^a-zA-Z\-]/g, '').toLowerCase();
+        const updatedWord = newWords.find(w => w.word.replace(/[^a-zA-Z\-]/g, '').toLowerCase() === currentWord);
+        
+        if (updatedWord && updatedWord.meaning && btn.textContent.includes('✅')) {
+            // Found meaning, update the button UI
+            btn.innerHTML = `✅ <span style="margin-left:8px; font-weight:normal; color:#4b5563; font-size:13px; max-width:200px; display:inline-block; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${updatedWord.meaning}">${updatedWord.meaning}</span>`;
+        }
+    }
+});
