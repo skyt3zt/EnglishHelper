@@ -49,16 +49,19 @@ listEl.addEventListener('click', (e) => {
   if (e.target.tagName !== 'BUTTON') return;
   const id = parseInt(e.target.dataset.id);
   
-  if (e.target.classList.contains('btn-del')) {
-    if (!confirm('确定要删除这个单词吗？此操作不可恢复。')) return;
-    allWords = allWords.filter(w => w.id !== id);
-  } else if (e.target.classList.contains('btn-master')) {
-    const w = allWords.find(w => w.id === id);
-    if (w) w.reviewStage = w.reviewStage === -1 ? 0 : -1;
-  }
-  
-  // Reverse back to oldest first before saving
-  chrome.storage.local.set({ words: allWords.slice().reverse() }, loadAndRender);
+  chrome.storage.local.get({ words: [] }, (res) => {
+    let currentWords = res.words;
+    
+    if (e.target.classList.contains('btn-del')) {
+        if (!confirm('确定要删除这个单词吗？此操作不可恢复。')) return;
+        currentWords = currentWords.filter(w => w.id !== id);
+    } else if (e.target.classList.contains('btn-master')) {
+        const w = currentWords.find(w => w.id === id);
+        if (w) w.reviewStage = w.reviewStage === -1 ? 0 : -1;
+    }
+    
+    chrome.storage.local.set({ words: currentWords }, loadAndRender);
+  });
 });
 
 // Initial load

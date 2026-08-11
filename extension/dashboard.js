@@ -151,26 +151,29 @@ function renderLibrary() {
             const dropId = parseInt(tr.dataset.id);
             if (dragSrcId === dropId) return;
             
-            const fromIdx = words.findIndex(w => w.id === dragSrcId);
-            const toIdx = words.findIndex(w => w.id === dropId);
-            
-            if (fromIdx !== -1 && toIdx !== -1) {
-                const [movedItem] = words.splice(fromIdx, 1);
-                const newToIdx = words.findIndex(w => w.id === dropId);
+            chrome.storage.local.get({ words: [] }, (res) => {
+                let currentWords = res.words.reverse();
+                const fromIdx = currentWords.findIndex(w => w.id === dragSrcId);
+                const toIdx = currentWords.findIndex(w => w.id === dropId);
                 
-                if (fromIdx < toIdx) {
-                    words.splice(newToIdx + 1, 0, movedItem);
-                } else {
-                    words.splice(newToIdx, 0, movedItem);
+                if (fromIdx !== -1 && toIdx !== -1) {
+                    const [movedItem] = currentWords.splice(fromIdx, 1);
+                    const newToIdx = currentWords.findIndex(w => w.id === dropId);
+                    
+                    if (fromIdx < toIdx) {
+                        currentWords.splice(newToIdx + 1, 0, movedItem);
+                    } else {
+                        currentWords.splice(newToIdx, 0, movedItem);
+                    }
+                    
+                    const enforceOrder = (list) => {
+                        const pinned = list.filter(w => w.isPinned);
+                        const unpinned = list.filter(w => !w.isPinned);
+                        return [...pinned, ...unpinned];
+                    };
+                    chrome.storage.local.set({ words: enforceOrder(currentWords).reverse() }, renderLibrary);
                 }
-                
-                const enforceOrder = (list) => {
-                    const pinned = list.filter(w => w.isPinned);
-                    const unpinned = list.filter(w => !w.isPinned);
-                    return [...pinned, ...unpinned];
-                };
-                chrome.storage.local.set({ words: enforceOrder(words).reverse() }, renderLibrary);
-            }
+            });
         });
 
         document.getElementById('lib-container')?.addEventListener('click', async (e) => {
@@ -186,87 +189,91 @@ function renderLibrary() {
             if (!btn) return;
             
             const id = parseInt(btn.dataset.id);
-            const wordObj = words.find(w => w.id === id);
-            if (!wordObj) return;
 
-            const enforceOrder = (list) => {
-                const pinned = list.filter(w => w.isPinned);
-                const unpinned = list.filter(w => !w.isPinned);
-                return [...pinned, ...unpinned];
-            };
+            chrome.storage.local.get({ words: [] }, async (res) => {
+                let currentWords = res.words.reverse();
+                const wordObj = currentWords.find(w => w.id === id);
+                if (!wordObj) return;
 
-            if (btn.classList.contains('btn-del')) {
-                if (!confirm('确定要删除这个单词吗？此操作不可恢复。')) return;
-                const newWords = words.filter(w => w.id !== id);
-                chrome.storage.local.set({ words: enforceOrder(newWords).reverse() }, renderLibrary);
-            } 
-            else if (btn.classList.contains('btn-master')) {
-                wordObj.reviewStage = wordObj.reviewStage === -1 ? 0 : -1;
-                chrome.storage.local.set({ words: enforceOrder(words).reverse() }, renderLibrary);
-            }
-            else if (btn.classList.contains('btn-pin')) {
-                if (!wordObj.isPinned && words.filter(w => w.isPinned).length >= 3) {
-                    alert('最多只能置顶3个单词！');
-                    return;
+                const enforceOrder = (list) => {
+                    const pinned = list.filter(w => w.isPinned);
+                    const unpinned = list.filter(w => !w.isPinned);
+                    return [...pinned, ...unpinned];
+                };
+
+                if (btn.classList.contains('btn-del')) {
+                    if (!confirm('确定要删除这个单词吗？此操作不可恢复。')) return;
+                    const newWords = currentWords.filter(w => w.id !== id);
+                    chrome.storage.local.set({ words: enforceOrder(newWords).reverse() }, renderLibrary);
+                } 
+                else if (btn.classList.contains('btn-master')) {
+                    wordObj.reviewStage = wordObj.reviewStage === -1 ? 0 : -1;
+                    chrome.storage.local.set({ words: enforceOrder(currentWords).reverse() }, renderLibrary);
                 }
-                wordObj.isPinned = !wordObj.isPinned;
-                chrome.storage.local.set({ words: enforceOrder(words).reverse() }, renderLibrary);
-            }
-            else if (btn.classList.contains('btn-fetch')) {
-                btn.textContent = '获取中...';
-                const cleanWord = wordObj.word.replace(/[^a-zA-Z\\-]/g, '');
-                if (!cleanWord) {
-                    btn.textContent = '无效';
-                    return;
+                else if (btn.classList.contains('btn-pin')) {
+                    if (!wordObj.isPinned && currentWords.filter(w => w.isPinned).length >= 3) {
+                        alert('最多只能置顶3个单词！');
+                        return;
+                    }
+                    wordObj.isPinned = !wordObj.isPinned;
+                    chrome.storage.local.set({ words: enforceOrder(currentWords).reverse() }, renderLibrary);
                 }
-                
-                chrome.storage.local.get({ targetLang: 'zh-CN' }, async (storageRes) => {
-                    const fetchWithTimeout = (url, ms) => Promise.race([
-                        fetch(url),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
-                    ]);
-
-                    const pPhonetic = fetchWithTimeout(`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord}`, 3000)
-                        .then(r => r.ok ? r.json() : null)
-                        .then(data => {
-                            let phonetic = '';
-                            let pos = '';
-                            if (data && Array.isArray(data) && data[0]) {
-                                phonetic = data[0].phonetics?.find(p => p.text)?.text || '';
-                                if (data[0].meanings) {
-                                    const posMap = { noun: 'n.', verb: 'v.', adjective: 'adj.', adverb: 'adv.', pronoun: 'pron.', preposition: 'prep.', conjunction: 'conj.', interjection: 'int.' };
-                                    const posSet = new Set(data[0].meanings.map(m => posMap[m.partOfSpeech] || m.partOfSpeech));
-                                    pos = Array.from(posSet).join(', ');
-                                }
-                            }
-                            return { phonetic, pos };
-                        })
-                        .catch(() => ({ phonetic: '', pos: '' }));
-
-                    const fetchMyMemory = () => fetchWithTimeout(`https://api.mymemory.translated.net/get?q=${cleanWord}&langpair=en|${storageRes.targetLang}`, 5000)
-                        .then(r => r.ok ? r.json() : null)
-                        .then(data => data && data.responseData && data.responseData.translatedText ? data.responseData.translatedText : '网络问题未找到释义，请检查网络后重新获取')
-                        .catch(() => '网络问题未找到释义，请检查网络后重新获取');
-
-                    const pMeaning = fetchWithTimeout(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${storageRes.targetLang}&dt=t&q=${cleanWord}`, 2500)
-                        .then(res => {
-                            if (!res.ok) throw new Error('Google Failed');
-                            return res.json();
-                        })
-                        .then(data => {
-                            if (data && data[0] && data[0][0] && data[0][0][0]) return data[0][0][0];
-                            throw new Error('Invalid Google Response');
-                        })
-                        .catch(() => fetchMyMemory());
-
-                    const [phoneticData, meaning] = await Promise.all([pPhonetic, pMeaning]);
-                    const finalMeaning = phoneticData.pos ? `[${phoneticData.pos}] ${meaning}` : meaning;
-                    wordObj.phonetic = phoneticData.phonetic;
-                    wordObj.meaning = finalMeaning;
+                else if (btn.classList.contains('btn-fetch')) {
+                    btn.textContent = '获取中...';
+                    const cleanWord = wordObj.word.replace(/[^a-zA-Z\\-]/g, '');
+                    if (!cleanWord) {
+                        btn.textContent = '无效';
+                        return;
+                    }
                     
-                    chrome.storage.local.set({ words: enforceOrder(words).reverse() }, renderLibrary);
-                });
-            }
+                    chrome.storage.local.get({ targetLang: 'zh-CN' }, async (storageRes) => {
+                        const fetchWithTimeout = (url, ms) => Promise.race([
+                            fetch(url),
+                            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
+                        ]);
+
+                        const pPhonetic = fetchWithTimeout(`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord}`, 3000)
+                            .then(r => r.ok ? r.json() : null)
+                            .then(data => {
+                                let phonetic = '';
+                                let pos = '';
+                                if (data && Array.isArray(data) && data[0]) {
+                                    phonetic = data[0].phonetics?.find(p => p.text)?.text || '';
+                                    if (data[0].meanings) {
+                                        const posMap = { noun: 'n.', verb: 'v.', adjective: 'adj.', adverb: 'adv.', pronoun: 'pron.', preposition: 'prep.', conjunction: 'conj.', interjection: 'int.' };
+                                        const posSet = new Set(data[0].meanings.map(m => posMap[m.partOfSpeech] || m.partOfSpeech));
+                                        pos = Array.from(posSet).join(', ');
+                                    }
+                                }
+                                return { phonetic, pos };
+                            })
+                            .catch(() => ({ phonetic: '', pos: '' }));
+
+                        const fetchMyMemory = () => fetchWithTimeout(`https://api.mymemory.translated.net/get?q=${cleanWord}&langpair=en|${storageRes.targetLang}`, 5000)
+                            .then(r => r.ok ? r.json() : null)
+                            .then(data => data && data.responseData && data.responseData.translatedText ? data.responseData.translatedText : '网络问题未找到释义，请检查网络后重新获取')
+                            .catch(() => '网络问题未找到释义，请检查网络后重新获取');
+
+                        const pMeaning = fetchWithTimeout(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${storageRes.targetLang}&dt=t&q=${cleanWord}`, 2500)
+                            .then(res => {
+                                if (!res.ok) throw new Error('Google Failed');
+                                return res.json();
+                            })
+                            .then(data => {
+                                if (data && data[0] && data[0][0] && data[0][0][0]) return data[0][0][0];
+                                throw new Error('Invalid Google Response');
+                            })
+                            .catch(() => fetchMyMemory());
+
+                        const [phoneticData, meaning] = await Promise.all([pPhonetic, pMeaning]);
+                        const finalMeaning = phoneticData.pos ? `[${phoneticData.pos}] ${meaning}` : meaning;
+                        wordObj.phonetic = phoneticData.phonetic;
+                        wordObj.meaning = finalMeaning;
+                        
+                        chrome.storage.local.set({ words: enforceOrder(currentWords).reverse() }, renderLibrary);
+                    });
+                }
+            });
         });
     });
 }
@@ -476,3 +483,15 @@ document.addEventListener('keydown', (e) => {
 });
 
 init();
+
+// Hidden import page entry point
+document.addEventListener('DOMContentLoaded', () => {
+    const navTitle = document.querySelector('.nav-title');
+    if (navTitle) {
+        navTitle.title = "双击进入隐藏功能区";
+        navTitle.style.cursor = "pointer";
+        navTitle.addEventListener('dblclick', () => {
+            window.location.href = 'import.html';
+        });
+    }
+});
