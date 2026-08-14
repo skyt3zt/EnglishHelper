@@ -110,12 +110,12 @@ function saveWord() {
     const words = res.words;
     
     // 免费版限制：最多 5 个单词 (为了方便您测试，上限设为 5)
-    if (words.length >= 5) {
+    if (words.length >= 20) {
         chrome.runtime.sendMessage({ action: "check_payment" }, (response) => {
             if (response && response.paid) {
                 doSave(words);
             } else {
-                if (confirm("【免费版限制】您的生词本已达到上限 (5个)。\\n这是高级版功能，是否立即解锁无限制添加？")) {
+                if (confirm("【免费版限制】您的生词本已达到上限 (20个)，是否立即解锁无限制添加？")) {
                     chrome.runtime.sendMessage({ action: "open_payment" });
                 }
                 hideButton();

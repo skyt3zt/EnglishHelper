@@ -1,29 +1,48 @@
 function ExtPay(extensionId) {
+  const HOST = 'https://extensionpay.com';
+
+  async function fetchUser() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['extpay_user'], async (res) => {
+        let user = res.extpay_user;
+        try {
+          const url = user && user.id
+            ? HOST + '/api/v1/users/user?extension_id=' + extensionId + '&user_id=' + user.id
+            : HOST + '/api/v1/users/user?extension_id=' + extensionId;
+          
+          const resp = await fetch(url);
+          if (resp.ok) {
+            user = await resp.json();
+            chrome.storage.local.set({ extpay_user: user });
+            resolve(user);
+            return;
+          }
+        } catch (err) {
+          console.warn('ExtPay 网络验证失败，降级使用本地缓存数据:', err);
+        }
+        resolve(user || { paid: false });
+      });
+    });
+  }
+
   return {
     startBackground() {
-      console.log(`ExtPay background started for ${extensionId}`);
-    },
-    async getUser() {
-      return new Promise(resolve => {
-          chrome.storage.local.get(['isPaidDemo'], (res) => {
-              // Read from storage to simulate whether the user has paid
-              resolve({ paid: !!res.isPaidDemo });
-          });
+      chrome.tabs.onUpdated?.addListener((tabId, changeInfo, tab) => {
+        if (changeInfo.url && changeInfo.url.indexOf('extensionpay.com/extension/' + extensionId) !== -1) {
+          fetchUser();
+        }
       });
     },
+    async getUser() {
+      return fetchUser();
+    },
     openPaymentPage() {
-      if (confirm("【模拟收费墙 - ExtensionPay】\\n这原本会弹出一个真实的信用卡支付页面。\\n您正在尝试使用高级功能，愿意现在付费解锁吗？\\n\\n(点击“确定”模拟支付成功)")) {
-          chrome.storage.local.set({isPaidDemo: true}, () => {
-              alert("🎉 感谢购买！高级功能已为您永久解锁。");
-          });
-      } else {
-          alert("您取消了支付，高级功能依然被锁定。");
-      }
+      const url = HOST + '/extension/' + extensionId;
+      chrome.tabs.create({ url: url });
     }
   };
 }
 
-// For service workers and browsers
 if (typeof window === 'undefined') {
   self.ExtPay = ExtPay;
 } else {

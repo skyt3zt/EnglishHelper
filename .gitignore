@@ -1,2 +1,5 @@
 *.zip
 .DS_Store
+
+wordcatcher_v*/
+dist/

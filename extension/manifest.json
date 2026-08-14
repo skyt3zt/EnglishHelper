@@ -3,23 +3,41 @@
   "name": "WordCatcher",
   "version": "1.2.1",
   "description": "Capture words from web pages for spaced repetition review.",
-  "permissions": ["storage", "contextMenus", "activeTab"],
+  "permissions": [
+    "storage",
+    "contextMenus",
+    "activeTab"
+  ],
   "host_permissions": [
     "https://translate.googleapis.com/*",
     "https://api.dictionaryapi.dev/*",
     "https://api.mymemory.translated.net/*",
     "https://extensionpay.com/*"
   ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ]
     }
   ]
 }
