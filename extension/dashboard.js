@@ -179,6 +179,7 @@ function renderLibrary() {
         document.getElementById('lib-container')?.addEventListener('click', async (e) => {
             if (e.target.classList.contains('btn-speak')) {
                 e.stopPropagation();
+                window.speechSynthesis.cancel();
                 const msg = new SpeechSynthesisUtterance(e.target.dataset.word);
                 msg.lang = 'en-US';
                 window.speechSynthesis.speak(msg);
@@ -324,6 +325,7 @@ function nextCard() {
     
     const speakWord = (e) => {
         e.stopPropagation();
+        window.speechSynthesis.cancel();
         const msg = new SpeechSynthesisUtterance(currentWord.word);
         msg.lang = 'en-US';
         window.speechSynthesis.speak(msg);

@@ -1,6 +1,6 @@
-body { 
-  width: 100%; 
-  min-width: 350px;
+html, body { 
+  width: 360px; 
+  min-height: 180px;
   font-family: system-ui, -apple-system, sans-serif; 
   margin: 0; 
   background: #f9fafb; 

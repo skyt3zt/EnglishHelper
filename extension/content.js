@@ -11,7 +11,7 @@ document.addEventListener('mouseup', (e) => {
   const text = selection.toString().trim();
   
   // Basic heuristic to only capture words or short phrases, not whole sentences
-  const wordCount = text.split(/\\s+/).length;
+  const wordCount = text.split(/\s+/).length;
   
   if (text && text.length > 0 && text.length < 40 && wordCount <= 3) {
     currentSelection = {
@@ -81,10 +81,10 @@ function saveWord() {
   };
 
   const doSave = (words) => {
-    const cleanText = text.replace(/[^a-zA-Z\\-]/g, '').toLowerCase();
+    const cleanText = text.replace(/[^a-zA-Z-]/g, '').toLowerCase();
     
     // Check if the clean word already exists
-    if (!words.some(w => w.word.replace(/[^a-zA-Z\\-]/g, '').toLowerCase() === cleanText)) {
+    if (!words.some(w => w.word.replace(/[^a-zA-Z-]/g, '').toLowerCase() === cleanText)) {
         words.push(wordObj);
         chrome.storage.local.set({ words }, () => {
             // Trigger background fetch
@@ -93,34 +93,36 @@ function saveWord() {
             // Visual feedback
             if (floatingBtnHost) {
                 const btn = floatingBtnHost.shadowRoot.querySelector('button');
-                btn.textContent = '✅';
+                btn.innerHTML = `✅ <span style="margin-left:6px; font-size:12px; color:#6b7280; vertical-align:middle;">获取释义中...</span>`;
             }
         });
     } else {
         if (floatingBtnHost) {
             const btn = floatingBtnHost.shadowRoot.querySelector('button');
-            btn.textContent = '已存在';
+            const existing = words.find(w => w && w.word && w.word.replace(/[^a-zA-Z-]/g, '').toLowerCase() === cleanText);
+            if (existing && existing.meaning) {
+                btn.innerHTML = `已存在 <span style="margin-left:8px; font-weight:normal; color:#4b5563; font-size:13px; max-width:200px; display:inline-block; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${existing.meaning}">${existing.meaning}</span>`;
+            } else {
+                btn.textContent = '已存在';
+            }
         } else {
             hideButton();
         }
     }
   };
 
-  chrome.storage.local.get({ words: [] }, (res) => {
+  chrome.storage.local.get({ words: [], isPaid: false }, (res) => {
     const words = res.words;
+    const isPaid = !!res.isPaid;
     
-    // 免费版限制：最多 5 个单词 (为了方便您测试，上限设为 5)
-    if (words.length >= 20) {
-        chrome.runtime.sendMessage({ action: "check_payment" }, (response) => {
-            if (response && response.paid) {
-                doSave(words);
-            } else {
-                if (confirm("【免费版限制】您的生词本已达到上限 (20个)，是否立即解锁无限制添加？")) {
-                    chrome.runtime.sendMessage({ action: "open_payment" });
-                }
-                hideButton();
-            }
-        });
+    // 免费版限制：最多 20 个单词
+    if (words.length >= 20 && !isPaid) {
+        if (confirm("【免费版限制】您的生词本已达到上限 (20个)，是否立即解锁无限制添加？")) {
+            chrome.runtime.sendMessage({ action: "open_payment" });
+        }
+        hideButton();
+        // 在后台静默同步一次支付状态
+        chrome.runtime.sendMessage({ action: "sync_payment" });
     } else {
         doSave(words);
     }
@@ -135,7 +137,7 @@ chrome.runtime.onMessage.addListener((req) => {
       
       if (!text) return;
       
-      const wordCount = text.split(/\\s+/).length;
+      const wordCount = text.split(/\s+/).length;
       if (text.length >= 40 || wordCount > 3) {
           alert("添加失败：您选中的内容太长了。请只添加单词或短语（不超过3个词）。");
           return;
@@ -157,8 +159,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
         if (!btn || floatingBtnHost.style.display === 'none') return;
         
         // Find the currently added word
-        const currentWord = currentSelection.text.replace(/[^a-zA-Z\-]/g, '').toLowerCase();
-        const updatedWord = newWords.find(w => w.word.replace(/[^a-zA-Z\-]/g, '').toLowerCase() === currentWord);
+        const currentWord = currentSelection.text.replace(/[^a-zA-Z-]/g, '').toLowerCase();
+        const updatedWord = newWords.find(w => w && w.word && w.word.replace(/[^a-zA-Z-]/g, '').toLowerCase() === currentWord);
         
         if (updatedWord && updatedWord.meaning && btn.textContent.includes('✅')) {
             // Found meaning, update the button UI
