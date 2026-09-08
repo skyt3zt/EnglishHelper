@@ -4,13 +4,18 @@
   <meta charset="utf-8">
   <title>WordCatcher</title>
   <link rel="stylesheet" href="popup.css">
+  <script>
+    window.__popupStartTime = performance.now();
+    console.log('[WordCatcher Popup] HTML parsed at:', new Date().toLocaleTimeString());
+  </script>
 </head>
 <body>
   <div class="header">
     <div class="stats" style="flex-wrap: wrap; gap: 8px; align-items: center;">
-      <div style="display: flex; gap: 12px; font-size: 13px; color: #6b7280; flex: 1; min-width: 120px;">
+      <div style="display: flex; gap: 10px; font-size: 13px; color: #6b7280; flex: 1; min-width: 140px; align-items: center;">
         <span>总数: <b id="total">0</b></span>
         <span>待复习: <b id="review-today">0</b></span>
+        <span id="vip-status" style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #e5e7eb; color: #4b5563; cursor: pointer; font-weight: 500;" title="点击可同步检测 VIP 状态">免费版</span>
       </div>
       <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
         <button id="btn-review" style="background:#3b82f6; color:#fff;">复习</button>
