@@ -197,10 +197,15 @@ document.getElementById('btn-export')?.addEventListener('click', () => {
         csvContent += esc(w.word) + ',' + esc(w.context) + ',' + esc(w.meaning) + ',' + esc(w.phonetic) + ',' + w.reviewStage + "\n";
       });
 
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      const filename = `wordcatcher_export_${timestamp}.csv`;
+
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
-      link.setAttribute("download", "wordcatcher_export.csv");
+      link.setAttribute("download", filename);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
